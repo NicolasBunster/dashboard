@@ -231,6 +231,7 @@ def subir_cliente(cliente: str, rutas: dict, engine, dry_run: bool = False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cliente", default=None, help="Sube solo este cliente")
+    parser.add_argument("--skip",    default=None, help="Omite este cliente (ej. cencosud)")
     parser.add_argument("--dry-run", action="store_true", help="Sin escribir en DB")
     args = parser.parse_args()
 
@@ -247,7 +248,13 @@ def main():
     print(f"Conectado a DB.")
     print(f"BASE: {BASE}")
 
-    clientes = {args.cliente: CLIENTES[args.cliente]} if args.cliente else CLIENTES
+    if args.cliente:
+        clientes = {args.cliente: CLIENTES[args.cliente]}
+    elif args.skip:
+        skip_set = {s.strip() for s in args.skip.split(",")}
+        clientes = {k: v for k, v in CLIENTES.items() if k not in skip_set}
+    else:
+        clientes = CLIENTES
 
     ok = err = 0
     for key, rutas in clientes.items():
