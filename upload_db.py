@@ -10,7 +10,7 @@ Uso:
   python upload_db.py --dry-run          ← muestra qué haría, sin subir
 ═══════════════════════════════════════════════════════════
 """
-import os, sys, argparse
+import os, sys, argparse, time
 from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -244,7 +244,20 @@ def main():
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-    engine = create_engine(db_url, pool_pre_ping=True)
+    engine = create_engine(db_url, pool_pre_ping=True,
+                           connect_args={"connect_timeout": 30})
+    # Esperar que la DB esté disponible (hasta 60s)
+    for intento in range(12):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            break
+        except Exception as e:
+            if intento == 11:
+                print(f"ERROR: DB no disponible tras 60s: {e}")
+                sys.exit(1)
+            print(f"  DB no lista, reintentando en 5s... ({intento+1}/12)")
+            time.sleep(5)
     print(f"Conectado a DB.")
     print(f"BASE: {BASE}")
 
@@ -261,6 +274,7 @@ def main():
         try:
             subir_cliente(key, rutas, engine, dry_run=args.dry_run)
             ok += 1
+            time.sleep(1)  # pausa entre clientes para no saturar la DB
         except Exception as e:
             print(f"  ERROR: {e}")
             err += 1

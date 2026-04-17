@@ -12,11 +12,9 @@ CREATE TABLE IF NOT EXISTS golpes (
     site        VARCHAR(200),
     conductor   VARCHAR(200),
     nivel       VARCHAR(20),
-    hora_golpe  TIMESTAMP,
+    hora_golpe  VARCHAR(30),
     descarga_bateria FLOAT,
-    velocidad   FLOAT,
-    traccionando BOOLEAN,
-    elevando     BOOLEAN
+    velocidad   FLOAT
 );
 CREATE INDEX IF NOT EXISTS idx_golpes_cliente ON golpes(cliente);
 CREATE INDEX IF NOT EXISTS idx_golpes_fecha   ON golpes(hora_golpe);
@@ -32,11 +30,11 @@ CREATE TABLE IF NOT EXISTS utilizacion (
     marca           VARCHAR(100),
     site            VARCHAR(200),
     conductor       VARCHAR(200),
-    inicio          TIMESTAMP,
-    seg_llave       INTEGER,
-    seg_funcionam   INTEGER,
-    seg_traccion    INTEGER,
-    seg_elevacion   INTEGER,
+    inicio          VARCHAR(30),
+    seg_llave       FLOAT,
+    seg_funcionam   FLOAT,
+    seg_traccion    FLOAT,
+    seg_elevacion   FLOAT,
     ratio_func_llave FLOAT,
     metodo_apagado  VARCHAR(100),
     claves_compartidas INTEGER DEFAULT 0

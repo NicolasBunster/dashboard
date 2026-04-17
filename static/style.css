@@ -35,6 +35,7 @@ header {
 }
 .header-left { display: flex; align-items: center; gap: 16px; }
 .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+.cliente-nombre { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: 0.5px; }
 #clienteSelect {
   background: var(--bg3); color: var(--text); border: 1px solid var(--border);
   padding: 6px 10px; border-radius: 4px; font-size: 13px; min-width: 180px;

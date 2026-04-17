@@ -11,34 +11,11 @@ from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Optional
 
-import secrets
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query, Depends
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-
-# ── Autenticación admin ───────────────────────────────────────────────────────
-# Configura ADMIN_USER y ADMIN_PASSWORD como variables de entorno en Railway.
-# Si no están definidas, el admin queda deshabilitado (solo existen URLs de cliente).
-_security = HTTPBasic(auto_error=False)
-
-def _verificar_admin(creds: HTTPBasicCredentials = Depends(_security)):
-    user = os.getenv("ADMIN_USER", "")
-    pwd  = os.getenv("ADMIN_PASSWORD", "")
-    if not user or not pwd:
-        raise HTTPException(403, "Admin no configurado")
-    ok = (
-        creds is not None
-        and secrets.compare_digest(creds.username.encode(), user.encode())
-        and secrets.compare_digest(creds.password.encode(), pwd.encode())
-    )
-    if not ok:
-        raise HTTPException(
-            401, "Credenciales incorrectas",
-            headers={"WWW-Authenticate": "Basic realm='I_Site Admin'"}
-        )
 
 # ── PostgreSQL (opcional) ─────────────────────────────────────────────────────
 _db_engine = None
@@ -70,54 +47,12 @@ def _base():
 
 BASE = _base()
 
-# Mapa cliente → carpetas de datos
-CLIENTES = {
-    "cencosud":     {"label": "CENCOSUD",            "golpes": BASE/"CENCOSUD/Dashboard - Cencosud/Golpes Cencosud",           "util": BASE/"CENCOSUD/Dashboard - Cencosud/Utilización Cencosud",       "bat": BASE/"CENCOSUD/Dashboard - Cencosud/Baterías Cencosud"},
-    "agrosuper":    {"label": "AGROSUPER",            "golpes": BASE/"AGROSUPER/Dashboard - Agrosuper/Golpes Agrosuper",         "util": BASE/"AGROSUPER/Dashboard - Agrosuper/Utilización Agrosuper",     "bat": BASE/"AGROSUPER/Dashboard - Agrosuper/Baterías Agrosuper"},
-    "watts":        {"label": "WATT'S",               "golpes": BASE/"WATT'S/Dashboard - Watts/Golpes Watts",                   "util": BASE/"WATT'S/Dashboard - Watts/Utilización Watts",               "bat": None},
-    "adidas":       {"label": "Adidas",               "golpes": BASE/"Adidas/Golpes Adidas",                                    "util": BASE/"Adidas/Utilización Adidas",                                 "bat": None},
-    "agrocommerce": {"label": "Agrocommerce",         "golpes": BASE/"Agrocommerce/Golpes Agrocommerce",                        "util": BASE/"Agrocommerce/Utilización Agrocommerce",                     "bat": None},
-    "arcor":        {"label": "Arcor",                "golpes": BASE/"Arcor/Golpes Arcor",                                      "util": BASE/"Arcor/Utilización Arcor",                                   "bat": None},
-    "ariztia":      {"label": "Ariztia",              "golpes": BASE/"Ariztia/Golpes Ariztia",                                  "util": BASE/"Ariztia/Utilización Ariztia",                               "bat": None},
-    "ascend":       {"label": "Ascend",               "golpes": BASE/"Ascend Laboratories SpA/Golpes Ascend",                   "util": BASE/"Ascend Laboratories SpA/Utilización Ascend",               "bat": None},
-    "bomi":         {"label": "Bomi Group",           "golpes": BASE/"Bomi Group/Golpes Bomi",                                  "util": BASE/"Bomi Group/Utilización Bomi",                               "bat": None},
-    "ccu":          {"label": "CCU",                  "golpes": BASE/"CCU/Golpes CCU",                                          "util": BASE/"CCU/Utilización CCU",                                       "bat": None},
-    "cmf":          {"label": "CMF",                  "golpes": BASE/"CMF/Golpes CMF",                                          "util": BASE/"CMF/Utilización CMF",                                       "bat": None},
-    "comaco":       {"label": "COMACO",               "golpes": BASE/"COMACO/Golpes COMACO",                                    "util": BASE/"COMACO/Utilización COMACO",                                 "bat": None},
-    "caribean":     {"label": "Caribean Pharma",      "golpes": BASE/"Caribean Pharma/Golpes Caribean Pharma",                  "util": BASE/"Caribean Pharma/Utilización Caribean Pharma",               "bat": None},
-    "chilecargo":   {"label": "ChileCargo",           "golpes": BASE/"ChileCargo/Golpes ChileCargo",                            "util": BASE/"ChileCargo/Utilización ChileCargo",                         "bat": None},
-    "cial":         {"label": "Cial Alimentos",       "golpes": BASE/"Cial Alimentos/Golpes Cial Alimentos",                    "util": BASE/"Cial Alimentos/Utilización Cial Alimentos",                 "bat": None},
-    "embonor":      {"label": "Coca Cola Embonor",    "golpes": BASE/"Coca Cola Embonor/Golpes Embonor",                        "util": BASE/"Coca Cola Embonor/Utilización Embonor",                     "bat": None},
-    "cristalerias": {"label": "Cristalerías Toro",    "golpes": BASE/"Cristalerías Toro/Golpes Cristalerias Toro",              "util": BASE/"Cristalerías Toro/Utilización Cristalerias Toro",           "bat": None},
-    "din":          {"label": "DIN S.A.",             "golpes": BASE/"DIN S.A./Golpes DIN",                                     "util": BASE/"DIN S.A./Utilización DIN",                                  "bat": None},
-    "dragpharma":   {"label": "Dragpharma",           "golpes": BASE/"Laboratorio Dragpharma/Golpes Dragpharma",                "util": BASE/"Laboratorio Dragpharma/Utilización Dragpharma",             "bat": None},
-    "egakat":       {"label": "EGAKAT",               "golpes": BASE/"EGAKAT/Golpes Egakat",                                    "util": BASE/"EGAKAT/Utilización Egakat",                                 "bat": None},
-    "fedex":        {"label": "Fedex",                "golpes": BASE/"Fedex/Golpes Fedex",                                      "util": BASE/"Fedex/Utilización Fedex",                                   "bat": None},
-    "friofort":     {"label": "FRIOFORT",             "golpes": BASE/"FRIOFORT/Golpes Friofort",                                "util": BASE/"FRIOFORT/Utilización Friofort",                             "bat": None},
-    "hoffens":      {"label": "Hoffens",              "golpes": BASE/"Hoffens/Golpes Hoffens",                                  "util": BASE/"Hoffens/Utilización Hoffens",                               "bat": None},
-    "icb":          {"label": "ICB S.A.",             "golpes": BASE/"ICB S.A./Golpes ICB",                                     "util": BASE/"ICB S.A./Utilización ICB",                                  "bat": None},
-    "imicar":       {"label": "IMICAR",               "golpes": BASE/"IMICAR/Golpes IMICAR",                                    "util": BASE/"IMICAR/Utilización IMICAR",                                 "bat": None},
-    "imega":        {"label": "Imega Ventus",         "golpes": BASE/"Imega Ventus/Golpes Imega Ventus",                        "util": BASE/"Imega Ventus/Utilización Imega Ventus",                     "bat": None},
-    "imperial":     {"label": "Imperial",             "golpes": BASE/"Imperial/Golpes Imperial",                                "util": BASE/"Imperial/Utilización Imperial",                             "bat": None},
-    "intcomex":     {"label": "Intcomex",             "golpes": BASE/"Intcomex/Golpes Intcomex",                                "util": BASE/"Intcomex/Utilización Intcomex",                             "bat": None},
-    "int-paper":    {"label": "Internacional Paper",  "golpes": BASE/"Internacional Paper/Golpes Internacional Paper",          "util": BASE/"Internacional Paper/Utilización Internacional Paper",       "bat": None},
-    "keylogistics": {"label": "Keylogistics",         "golpes": BASE/"Keylogistics/Golpes Keylogistics",                        "util": BASE/"Keylogistics/Utilización Keylogistics",                     "bat": None},
-    "kuehne":       {"label": "Kuehne + Nagel",       "golpes": BASE/"Kuehne + Nagel/Golpes Kuehne Nagel",                      "util": BASE/"Kuehne + Nagel/Utilización Kuehne Nagel",                   "bat": None},
-    "colun":        {"label": "Colun",                "golpes": BASE/"Colun/Golpes Colun",                                      "util": BASE/"Colun/Utilización Colun",                                   "bat": None},
-    "lapolar":      {"label": "Empresas La Polar",    "golpes": BASE/"Empresas La Polar/Golpes La Polar",                       "util": BASE/"Empresas La Polar/Utilización La Polar",                    "bat": None},
-    "loreal":       {"label": "L'OREAL",              "golpes": BASE/"L'OREAL/Golpes LOREAL",                                   "util": BASE/"L'OREAL/Utilización LOREAL",                                "bat": None},
-    "logisfashion": {"label": "Logisfashion",         "golpes": BASE/"Logisfashion/Golpes Logisfashion",                        "util": BASE/"Logisfashion/Utilización Logisfashion",                     "bat": None},
-    "nestle":       {"label": "Nestlé",               "golpes": BASE/"Nestlé/Golpes Nestle",                                    "util": BASE/"Nestlé/Utilización Nestle",                                 "bat": None},
-    "prisa":        {"label": "PRISA",                "golpes": BASE/"PRISA/Golpes PRISA",                                      "util": BASE/"PRISA/Utilización PRISA",                                   "bat": None},
-    "puma":         {"label": "PUMA",                 "golpes": BASE/"PUMA/Golpes PUMA",                                        "util": BASE/"PUMA/Utilización PUMA",                                     "bat": None},
-    "quelen":       {"label": "Quelen Export",        "golpes": BASE/"Quelen Export/Golpes Quelen Export",                      "util": BASE/"Quelen Export/Utilización Quelen Export",                   "bat": None},
-    "recilar":      {"label": "Re-cilar",             "golpes": BASE/"Re-cilar/Golpes Re-ciclar",                               "util": BASE/"Re-cilar/Utilización Re-ciclar",                            "bat": None},
-    "rosen":        {"label": "ROSEN",                "golpes": BASE/"ROSEN/Golpes ROSEN",                                      "util": BASE/"ROSEN/Utilización ROSEN",                                   "bat": None},
-    "sherwin":      {"label": "Sherwin Williams",     "golpes": BASE/"Sherwin Williams/Golpes Sherwin Williams",                "util": BASE/"Sherwin Williams/Utilización Sherwin Williams",             "bat": None},
-    "smu":          {"label": "SMU",                  "golpes": BASE/"SMU/Golpes SMU",                                          "util": BASE/"SMU/Utilización SMU",                                       "bat": None},
-    "tecnored":     {"label": "TecnoRed",             "golpes": BASE/"TecnoRed/Golpes TecnoRed",                                "util": BASE/"TecnoRed/Utilización TecnoRed",                             "bat": None},
-    "tottus":       {"label": "Tottus",               "golpes": BASE/"Tottus/Golpes Tottus",                                    "util": BASE/"Tottus/Utilización Tottus",                                 "bat": None},
-    "unilever":     {"label": "Unilever",             "golpes": BASE/"Unilever/Golpes Unilever",                                "util": BASE/"Unilever/Utilización Unilever",                             "bat": None},
+CLIENTE_ID    = "cencosud"
+CLIENTE_LABEL = "CENCOSUD"
+CLIENTE_META  = {
+    "golpes": BASE / "CENCOSUD/Dashboard - Cencosud/Golpes Cencosud",
+    "util":   BASE / "CENCOSUD/Dashboard - Cencosud/Utilización Cencosud",
+    "bat":    BASE / "CENCOSUD/Dashboard - Cencosud/Baterías Cencosud",
 }
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
@@ -687,67 +622,14 @@ app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 @app.get("/")
 def index():
-    # Raíz redirige a página de acceso denegado — el admin usa /isite-admin
-    from fastapi.responses import HTMLResponse
-    return HTMLResponse(
-        '<html><body style="background:#0a0a0a;color:#555;font-family:sans-serif;'
-        'display:flex;align-items:center;justify-content:center;height:100vh;margin:0">'
-        '<p>Acceso no autorizado. Usa la URL que te proporcionó I_Site.</p></body></html>',
-        status_code=403
-    )
-
-@app.get("/isite-admin")
-def admin(creds: HTTPBasicCredentials = Depends(_security)):
-    _verificar_admin(creds)
-    return FileResponse(str(STATIC / "index.html"))
-
-@app.get("/dashboard/{cliente}")
-def dashboard_page(cliente: str):
     return FileResponse(str(STATIC / "index.html"))
 
 @app.get("/health")
 def health():
     return {"status": "ok", "db": _get_db() is not None}
 
-@app.get("/api/clientes")
-def get_clientes():
-    result = []
-
-    # En modo DB: consultar qué clientes tienen filas en cada tabla
-    engine = _get_db()
-    db_golpes = set()
-    db_util   = set()
-    if engine is not None:
-        try:
-            from sqlalchemy import text as _text
-            with engine.connect() as conn:
-                for row in conn.execute(_text("SELECT DISTINCT cliente FROM golpes")):
-                    db_golpes.add(row[0])
-                for row in conn.execute(_text("SELECT DISTINCT cliente FROM utilizacion")):
-                    db_util.add(row[0])
-        except Exception as e:
-            print(f"  [DB] get_clientes error: {e}")
-
-    def _existe_excel(carpeta, nombre_base):
-        if not carpeta:
-            return False
-        return (carpeta / f"{nombre_base}.xlsx").exists() or bool(list(carpeta.glob(f"{nombre_base}_parte*.xlsx")))
-
-    for key, meta in CLIENTES.items():
-        if engine is not None:
-            tiene_g = key in db_golpes
-            tiene_u = key in db_util
-            tiene_b = key in db_util  # bat usa la misma tabla utilizacion
-        else:
-            tiene_g = _existe_excel(meta["golpes"], "_CONSOLIDADO_GOLPES")
-            tiene_u = _existe_excel(meta["util"],   "_CONSOLIDADO_UTILIZACION")
-            tiene_b = _existe_excel(meta["bat"],    "_CONSOLIDADO_BATERIAS")
-        result.append({"id": key, "label": meta["label"], "golpes": tiene_g, "util": tiene_u, "bat": tiene_b})
-    return result
-
-@app.get("/api/dashboard/{cliente}")
+@app.get("/api/dashboard")
 def get_dashboard(
-    cliente: str,
     modulo: Optional[str] = Query(None),   # "golpes" | "util" | "bat" | None=todos
     desde: Optional[str] = Query(None),
     hasta: Optional[str] = Query(None),
@@ -755,24 +637,21 @@ def get_dashboard(
     site: Optional[str] = Query(None),
     conductor: Optional[str] = Query(None),
 ):
-    if cliente not in CLIENTES:
-        raise HTTPException(404, f"Cliente '{cliente}' no encontrado")
-
-    meta = CLIENTES[cliente]
+    meta = CLIENTE_META
     cargar_g = modulo in (None, "golpes")
     cargar_u = modulo in (None, "util")
     cargar_b = modulo in (None, "bat")
 
-    df_g = _leer_consolidado_golpes(meta["golpes"], cliente) if cargar_g else None
-    df_u = _leer_consolidado_util(meta["util"],     cliente) if cargar_u else None
-    df_b = _leer_consolidado_bat(meta["bat"],       cliente) if cargar_b else None
+    df_g = _leer_consolidado_golpes(meta["golpes"], CLIENTE_ID) if cargar_g else None
+    df_u = _leer_consolidado_util(meta["util"],     CLIENTE_ID) if cargar_u else None
+    df_b = _leer_consolidado_bat(meta["bat"],       CLIENTE_ID) if cargar_b else None
 
     golpes = _procesar_golpes(df_g, desde, hasta, familia, site, conductor) if df_g is not None else None
     util   = _procesar_util(df_u, desde, hasta, familia, site, conductor)   if df_u is not None else None
     bat    = _procesar_bat(df_b, desde, hasta, conductor)                   if df_b is not None else None
 
     return {
-        "cliente": meta["label"],
+        "cliente": CLIENTE_LABEL,
         "actualizado": datetime.now().isoformat(),
         "golpes": golpes,
         "util": util,
@@ -781,7 +660,7 @@ def get_dashboard(
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"\n  I_Site Dashboard")
+    print(f"\n  I_Site Dashboard — CENCOSUD")
     print(f"  BASE: {BASE}")
     print(f"  URL:  http://localhost:8000\n")
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

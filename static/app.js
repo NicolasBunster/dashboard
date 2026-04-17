@@ -1,7 +1,6 @@
 'use strict';
 
 // ── Estado global ─────────────────────────────────────────────────────────────
-let clienteActual = '';
 let moduloActual  = 'golpes';
 let charts = {};
 let lastData = { golpes: null, util: null, bat: null };
@@ -18,45 +17,10 @@ Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
 Chart.defaults.font.size = 11;
 
 // ── Inicialización ────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
-  const path = window.location.pathname.split('/');
-  const clienteEnUrl = path[1] === 'dashboard' && path[2] ? path[2] : null;
-
-  if (clienteEnUrl) {
-    clienteActual = clienteEnUrl;
-    document.getElementById('clienteSelect').style.display = 'none';
-    cargarModulo();
-  } else {
-    await cargarListaClientes();
-    if (clienteActual) cargarModulo();
-  }
-
+window.addEventListener('DOMContentLoaded', () => {
+  cargarModulo();
   setInterval(cargarModulo, 5 * 60 * 1000);
 });
-
-async function cargarListaClientes() {
-  const res = await fetch('/api/clientes');
-  const lista = await res.json();
-  const sel = document.getElementById('clienteSelect');
-  lista.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.label;
-    sel.appendChild(opt);
-  });
-  if (!clienteActual && lista.length) {
-    clienteActual = lista[0].id;
-    sel.value = clienteActual;
-  }
-}
-
-function cambiarCliente(id) {
-  clienteActual = id;
-  lastData = { golpes: null, util: null, bat: null };
-  window.history.pushState({}, '', `/dashboard/${id}`);
-  limpiarFiltros(false);
-  cargarModulo();
-}
 
 function limpiarFiltros(reload = true) {
   ['fDesde','fHasta','fFamilia','fSite','fConductor'].forEach(id => {
@@ -81,27 +45,12 @@ function _params(modulo) {
 }
 
 async function cargarModulo() {
-  if (!clienteActual) return;
   setLoading(true);
   try {
-    const res = await fetch(`/api/dashboard/${clienteActual}${_params(moduloActual)}`);
+    const res = await fetch(`/api/dashboard${_params(moduloActual)}`);
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     setLoading(false);
-
-    document.title = `I_Site — ${data.cliente}`;
-
-    const sel = document.getElementById('clienteSelect');
-    if (sel.style.display === 'none') {
-      let lbl = document.getElementById('clienteLabel');
-      if (!lbl) {
-        lbl = document.createElement('span');
-        lbl.id = 'clienteLabel';
-        lbl.style.cssText = 'font-size:14px;font-weight:600;color:var(--text)';
-        sel.parentNode.insertBefore(lbl, sel);
-      }
-      lbl.textContent = data.cliente;
-    }
 
     if (data.golpes) { lastData.golpes = data.golpes; renderGolpes(data.golpes); actualizarFiltros(data.golpes); }
     if (data.util)   { lastData.util   = data.util;   renderUtil(data.util);     actualizarFiltros(data.util);   }
