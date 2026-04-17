@@ -11,11 +11,34 @@ from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Optional
 
+import secrets
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+# ── Autenticación admin ───────────────────────────────────────────────────────
+# Configura ADMIN_USER y ADMIN_PASSWORD como variables de entorno en Railway.
+# Si no están definidas, el admin queda deshabilitado (solo existen URLs de cliente).
+_security = HTTPBasic(auto_error=False)
+
+def _verificar_admin(creds: HTTPBasicCredentials = Depends(_security)):
+    user = os.getenv("ADMIN_USER", "")
+    pwd  = os.getenv("ADMIN_PASSWORD", "")
+    if not user or not pwd:
+        raise HTTPException(403, "Admin no configurado")
+    ok = (
+        creds is not None
+        and secrets.compare_digest(creds.username.encode(), user.encode())
+        and secrets.compare_digest(creds.password.encode(), pwd.encode())
+    )
+    if not ok:
+        raise HTTPException(
+            401, "Credenciales incorrectas",
+            headers={"WWW-Authenticate": "Basic realm='I_Site Admin'"}
+        )
 
 # ── PostgreSQL (opcional) ─────────────────────────────────────────────────────
 _db_engine = None
@@ -529,8 +552,8 @@ def index():
     )
 
 @app.get("/isite-admin")
-def admin():
-    # URL secreta para ver el selector completo de clientes
+def admin(creds: HTTPBasicCredentials = Depends(_security)):
+    _verificar_admin(creds)
     return FileResponse(str(STATIC / "index.html"))
 
 @app.get("/dashboard/{cliente}")

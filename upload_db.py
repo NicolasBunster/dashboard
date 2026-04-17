@@ -191,11 +191,13 @@ def subir_cliente(cliente: str, rutas: dict, engine, dry_run: bool = False):
         df = df.dropna(how="all")
 
         # Guardar fechas como string para compatibilidad con PostgreSQL
-        # y filtrar solo últimos 12 meses para no llenar el disco
+        # Clientes grandes (cencosud, agrosuper) limitar a 3 meses; resto 12 meses
+        CLIENTES_GRANDES = {"cencosud", "agrosuper"}
+        meses_historico = 3 if cliente in CLIENTES_GRANDES else 12
         for col_fecha in ["hora_golpe", "inicio"]:
             if col_fecha in df.columns:
                 fechas = pd.to_datetime(df[col_fecha], dayfirst=True, errors="coerce")
-                corte  = pd.Timestamp.now() - pd.DateOffset(months=12)
+                corte  = pd.Timestamp.now() - pd.DateOffset(months=meses_historico)
                 df     = df[fechas.isna() | (fechas >= corte)]
                 df[col_fecha] = df[col_fecha].astype(str).replace({"NaT": None, "nan": None})
                 break  # solo aplicar al primer col_fecha encontrado
@@ -223,7 +225,7 @@ def subir_cliente(cliente: str, rutas: dict, engine, dry_run: bool = False):
             conn.execute(text(f"DELETE FROM {tabla} WHERE cliente = :c"), {"c": cliente})
 
         df.to_sql(tabla, engine, if_exists="append", index=False, method="multi", chunksize=5000)
-        print(" ✓ subido")
+        print(" OK subido")
 
 
 def main():
