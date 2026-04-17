@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>I_Site Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <span class="logo">I_SITE</span>
+      <select id="clienteSelect" onchange="cambiarCliente(this.value)"></select>
+    </div>
+    <div class="header-right">
+      <span id="lastUpdate" class="update-time"></span>
+      <button class="btn-refresh" onclick="cargarDashboard()">↻ Actualizar</button>
+    </div>
+  </header>
+
+  <!-- Filtros -->
+  <div class="filtros-bar">
+    <div class="filtro-grupo">
+      <label>Desde</label>
+      <input type="date" id="fDesde" onchange="aplicarFiltros()">
+    </div>
+    <div class="filtro-grupo">
+      <label>Hasta</label>
+      <input type="date" id="fHasta" onchange="aplicarFiltros()">
+    </div>
+    <div class="filtro-grupo">
+      <label>Familia</label>
+      <select id="fFamilia" onchange="aplicarFiltros()"><option value="">Todas</option></select>
+    </div>
+    <div class="filtro-grupo">
+      <label>Site</label>
+      <select id="fSite" onchange="aplicarFiltros()"><option value="">Todos</option></select>
+    </div>
+    <div class="filtro-grupo">
+      <label>Conductor</label>
+      <select id="fConductor" onchange="aplicarFiltros()"><option value="">Todos</option></select>
+    </div>
+    <button class="btn-clear" onclick="limpiarFiltros()">✕ Limpiar</button>
+  </div>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab active" onclick="showTab('golpes', this)">GOLPES</button>
+    <button class="tab" onclick="showTab('util', this)">UTILIZACIÓN</button>
+    <button class="tab" onclick="showTab('bat', this)">BATERÍAS</button>
+  </nav>
+
+  <!-- Loading -->
+  <div id="loading" class="loading hidden">Cargando datos...</div>
+  <div id="noData" class="no-data hidden">Sin datos disponibles para este cliente.<br>Ejecuta el consolidado primero.</div>
+
+  <!-- ═══ GOLPES ═══ -->
+  <section id="tab-golpes" class="tab-content">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total Conductores</div><div class="kpi-val" id="g-conductores">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">Total Golpes Altos</div><div class="kpi-val" id="g-altos">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total Golpes Medios</div><div class="kpi-val" id="g-medios">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total Máquinas</div><div class="kpi-val" id="g-maquinas">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Apagado Bat. Desconectada</div><div class="kpi-val" id="g-batdesc">—</div></div>
+    </div>
+    <h2 class="section-title">GOLPES</h2>
+    <div class="charts-row">
+      <div class="chart-card chart-sm">
+        <h3>Total por Familia de Máquina</h3>
+        <canvas id="g-donut"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Golpes Altos por Mes</h3>
+        <canvas id="g-linea-mes"></canvas>
+      </div>
+      <div class="chart-card chart-sm">
+        <h3>Ranking Conductores</h3>
+        <div id="g-ranking" class="ranking-table"></div>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card chart-full">
+        <h3>Golpes Altos — Últimos 30 Días</h3>
+        <canvas id="g-barras-30"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ UTILIZACIÓN ═══ -->
+  <section id="tab-util" class="tab-content hidden">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Horas Funcionamiento</div><div class="kpi-val" id="u-hrsfunc">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Horas Llave</div><div class="kpi-val" id="u-hrsllave">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">% Eficiencia KPI</div><div class="kpi-val" id="u-eficiencia">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Apagado Bat. Desconectada</div><div class="kpi-val" id="u-batdesc">—</div></div>
+    </div>
+    <h2 class="section-title">UTILIZACIÓN</h2>
+    <div class="charts-row">
+      <div class="chart-card chart-sm">
+        <h3>Horas Funcionamiento por Familia</h3>
+        <canvas id="u-donut"></canvas>
+      </div>
+      <div class="chart-card chart-lg">
+        <h3>Claves Compartidas por Conductor</h3>
+        <canvas id="u-claves"></canvas>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Hrs Funcionamiento por Mes</h3>
+        <canvas id="u-linea-mes"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Hrs Funcionamiento por Día (últimos 30 días)</h3>
+        <canvas id="u-barras-dia"></canvas>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card chart-sm">
+        <h3>Ranking Conductores</h3>
+        <div id="u-ranking" class="ranking-table"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BATERÍAS ═══ -->
+  <section id="tab-bat" class="tab-content hidden">
+    <h2 class="section-title">BATERÍAS</h2>
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Distribución Método Apagado por Máquina</h3>
+        <canvas id="b-maquina"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Distribución Método Apagado por Conductor</h3>
+        <canvas id="b-conductor"></canvas>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Recuento por Mes</h3>
+        <canvas id="b-mes"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Incidentes por Hora (últimos 6 meses)</h3>
+        <canvas id="b-hora"></canvas>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Incidentes Batería &lt;20%</h3>
+        <canvas id="b-20pct"></canvas>
+      </div>
+      <div class="chart-card chart-sm">
+        <h3>Ranking Conductores</h3>
+        <div id="b-ranking" class="ranking-table"></div>
+      </div>
+    </div>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
