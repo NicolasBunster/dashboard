@@ -519,6 +519,18 @@ app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 @app.get("/")
 def index():
+    # Raíz redirige a página de acceso denegado — el admin usa /isite-admin
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(
+        '<html><body style="background:#0a0a0a;color:#555;font-family:sans-serif;'
+        'display:flex;align-items:center;justify-content:center;height:100vh;margin:0">'
+        '<p>Acceso no autorizado. Usa la URL que te proporcionó I_Site.</p></body></html>',
+        status_code=403
+    )
+
+@app.get("/isite-admin")
+def admin():
+    # URL secreta para ver el selector completo de clientes
     return FileResponse(str(STATIC / "index.html"))
 
 @app.get("/dashboard/{cliente}")

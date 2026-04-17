@@ -15,6 +15,7 @@ Chart.defaults.font.size = 11;
 // ── Inicialización ────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   const path = window.location.pathname.split('/');
+  // /dashboard/{cliente} → vista cliente  |  /isite-admin → vista admin
   const clienteEnUrl = path[1] === 'dashboard' && path[2] ? path[2] : null;
 
   if (clienteEnUrl) {
