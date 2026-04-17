@@ -14,14 +14,19 @@ Chart.defaults.font.size = 11;
 
 // ── Inicialización ────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  await cargarListaClientes();
   const path = window.location.pathname.split('/');
-  const id = path[path.length - 1];
-  if (id && id !== '' && id !== 'index.html') {
-    clienteActual = id;
-    document.getElementById('clienteSelect').value = id;
+  const clienteEnUrl = path[1] === 'dashboard' && path[2] ? path[2] : null;
+
+  if (clienteEnUrl) {
+    // URL directa de cliente → modo solo lectura, sin selector
+    clienteActual = clienteEnUrl;
+    document.getElementById('clienteSelect').style.display = 'none';
+    cargarModulo();
+  } else {
+    // Acceso admin desde raíz → selector completo
+    await cargarListaClientes();
+    if (clienteActual) cargarModulo();
   }
-  if (clienteActual) cargarModulo();
 
   // Auto-refresh cada 5 minutos — recarga solo el módulo visible
   setInterval(cargarModulo, 5 * 60 * 1000);
@@ -85,6 +90,18 @@ async function cargarModulo() {
     const data = await res.json();
     setLoading(false);
     document.title = `I_Site — ${data.cliente}`;
+    // En URL directa mostrar el nombre del cliente en lugar del selector
+    const sel = document.getElementById('clienteSelect');
+    if (sel.style.display === 'none') {
+      let lbl = document.getElementById('clienteLabel');
+      if (!lbl) {
+        lbl = document.createElement('span');
+        lbl.id = 'clienteLabel';
+        lbl.style.cssText = 'font-size:14px;font-weight:600;color:var(--text)';
+        sel.parentNode.insertBefore(lbl, sel);
+      }
+      lbl.textContent = data.cliente;
+    }
     // Fusionar en lastData para que rankings tenga todos los módulos
     if (data.golpes) lastData.golpes = data.golpes;
     if (data.util)   lastData.util   = data.util;
