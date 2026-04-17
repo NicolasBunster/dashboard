@@ -50,6 +50,7 @@
     <button class="tab active" onclick="showTab('golpes', this)">GOLPES</button>
     <button class="tab" onclick="showTab('util', this)">UTILIZACIÓN</button>
     <button class="tab" onclick="showTab('bat', this)">BATERÍAS</button>
+    <button class="tab" onclick="showTab('rankings', this)">RANKINGS</button>
   </nav>
 
   <!-- Loading -->
@@ -157,6 +158,34 @@
         <h3>Ranking Conductores</h3>
         <div id="b-ranking" class="ranking-table"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- ═══ RANKINGS ═══ -->
+  <section id="tab-rankings" class="tab-content hidden">
+    <h2 class="section-title">RANKINGS</h2>
+    <div class="rankings-grid">
+
+      <div class="chart-card ranking-panel">
+        <h3>Golpes Altos por Conductor <span class="rank-badge">Mayor → Menor</span></h3>
+        <div id="rnk-golpes" class="ranking-table ranking-scroll"></div>
+      </div>
+
+      <div class="chart-card ranking-panel">
+        <h3>Baterías Desconectadas por Conductor <span class="rank-badge">Mayor → Menor</span></h3>
+        <div id="rnk-bat-desc" class="ranking-table ranking-scroll"></div>
+      </div>
+
+      <div class="chart-card ranking-panel">
+        <h3>Claves Compartidas por Conductor <span class="rank-badge">Mayor → Menor</span></h3>
+        <div id="rnk-claves" class="ranking-table ranking-scroll"></div>
+      </div>
+
+      <div class="chart-card ranking-panel">
+        <h3>Horas de Utilización por Conductor <span class="rank-badge">Menor → Mayor</span></h3>
+        <div id="rnk-hrs" class="ranking-table ranking-scroll"></div>
+      </div>
+
     </div>
   </section>
 

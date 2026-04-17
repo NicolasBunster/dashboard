@@ -230,8 +230,8 @@ def _procesar_golpes(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
         return {"kpis": {}, "por_familia": [], "por_mes": [], "ultimos_30dias": [], "ranking": [], "sites": [], "familias": [], "conductores": []}
 
     # KPIs
-    altos  = int((df[col_nivel].str.lower() == "altos").sum()) if col_nivel else 0
-    medios = int((df[col_nivel].str.lower() == "medios").sum()) if col_nivel else 0
+    altos  = int((df[col_nivel].str.lower().str.contains("altos", na=False)).sum()) if col_nivel else 0
+    medios = int((df[col_nivel].str.lower().str.contains("medios", na=False)).sum()) if col_nivel else 0
     n_conductores = int(df[col_conductor].nunique()) if col_conductor else 0
     n_maquinas    = int(df[col_maquina].nunique()) if col_maquina else 0
     bat_desc = int(df[col_bat].sum()) if col_bat else 0
@@ -239,13 +239,13 @@ def _procesar_golpes(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
     # Por familia (para donut)
     por_familia = []
     if col_familia and col_nivel:
-        gf = df[df[col_nivel].str.lower() == "altos"].groupby(col_familia).size().reset_index(name="total")
+        gf = df[df[col_nivel].str.lower().str.contains("altos", na=False)].groupby(col_familia).size().reset_index(name="total")
         por_familia = [{"familia": r[col_familia], "total": int(r["total"])} for _, r in gf.iterrows()]
 
     # Por mes (línea)
     por_mes = []
     if col_fecha and col_nivel:
-        dm = df[df[col_nivel].str.lower() == "altos"].copy()
+        dm = df[df[col_nivel].str.lower().str.contains("altos", na=False)].copy()
         dm["mes"] = dm["__fecha"].dt.to_period("M").astype(str)
         gm = dm.groupby("mes").size().reset_index(name="total").sort_values("mes")
         por_mes = [{"mes": r["mes"], "total": int(r["total"])} for _, r in gm.iterrows()]
@@ -254,7 +254,7 @@ def _procesar_golpes(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
     ultimos_30 = []
     if col_fecha and col_nivel:
         hoy = datetime.now()
-        d30 = df[(df["__fecha"] >= hoy - timedelta(days=30)) & (df[col_nivel].str.lower() == "altos")].copy()
+        d30 = df[(df["__fecha"] >= hoy - timedelta(days=30)) & (df[col_nivel].str.lower().str.contains("altos", na=False))].copy()
         d30["dia"] = d30["__fecha"].dt.day
         gd = d30.groupby("dia").size().reset_index(name="total").sort_values("dia")
         ultimos_30 = [{"dia": int(r["dia"]), "total": int(r["total"])} for _, r in gd.iterrows()]
@@ -262,8 +262,8 @@ def _procesar_golpes(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
     # Ranking conductores por golpes altos
     ranking = []
     if col_conductor and col_nivel:
-        ra = df[df[col_nivel].str.lower() == "altos"].groupby(col_conductor).size().reset_index(name="golpes_altos")
-        ra = ra.sort_values("golpes_altos", ascending=False).head(20)
+        ra = df[df[col_nivel].str.lower().str.contains("altos", na=False)].groupby(col_conductor).size().reset_index(name="golpes_altos")
+        ra = ra.sort_values("golpes_altos", ascending=False).head(50)
         ranking = [{"conductor": r[col_conductor], "golpes_altos": int(r["golpes_altos"])} for _, r in ra.iterrows()]
 
     # Filtros disponibles
@@ -333,7 +333,7 @@ def _procesar_util(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
     # Claves compartidas por conductor
     claves_conductor = []
     if col_conductor and col_claves:
-        gc = df.groupby(col_conductor)[col_claves].sum().sort_values(ascending=False).head(20)
+        gc = df.groupby(col_conductor)[col_claves].sum().sort_values(ascending=False).head(50)
         claves_conductor = [{"conductor": k, "claves": int(v)} for k, v in gc.items() if v > 0]
 
     # Hrs func por mes
@@ -353,7 +353,7 @@ def _procesar_util(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
         gd = dd.groupby("dia")[col_seg_func].sum() / 3600
         hrs_dia = [{"dia": int(k), "horas": round(v, 1)} for k, v in sorted(gd.items())]
 
-    # Ranking
+    # Ranking por eficiencia (mayor a menor)
     ranking = []
     if col_conductor and col_seg_func and col_seg_llave:
         rk = df.groupby(col_conductor).agg(
@@ -361,9 +361,18 @@ def _procesar_util(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
             llave=pd.NamedAgg(col_seg_llave, "sum"),
         ).reset_index()
         rk["eficiencia"] = (rk["func"] / rk["llave"] * 100).round(1)
-        rk = rk.sort_values("eficiencia", ascending=False).head(20)
+        rk = rk.sort_values("eficiencia", ascending=False).head(50)
         ranking = [{"conductor": r[col_conductor], "eficiencia": float(r["eficiencia"]),
                     "hrs_func": round(r["func"]/3600, 1)} for _, r in rk.iterrows()]
+
+    # Ranking horas utilización (menor a mayor — peor rendimiento primero)
+    ranking_hrs = []
+    if col_conductor and col_seg_func:
+        rh = df.groupby(col_conductor)[col_seg_func].sum().reset_index()
+        rh = rh.rename(columns={col_seg_func: "seg_func"})
+        rh["hrs_func"] = (rh["seg_func"] / 3600).round(1)
+        rh = rh.sort_values("hrs_func", ascending=True).head(50)
+        ranking_hrs = [{"conductor": r[col_conductor], "hrs_func": float(r["hrs_func"])} for _, r in rh.iterrows()]
 
     sites_disp = sorted(df[col_site].dropna().unique().tolist()) if col_site else []
     fam_disp   = sorted(df[col_familia].dropna().unique().tolist()) if col_familia else []
@@ -381,6 +390,7 @@ def _procesar_util(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
         "hrs_mes": hrs_mes,
         "hrs_dia": hrs_dia,
         "ranking": ranking,
+        "ranking_hrs": ranking_hrs,
         "sites": sites_disp,
         "familias": fam_disp,
         "conductores": cond_disp,
@@ -468,15 +478,24 @@ def _procesar_bat(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
         gi = d_bajo.groupby("mes").size().reset_index(name="total").sort_values("mes")
         incidentes_20 = [{"mes": r["mes"], "total": int(r["total"])} for _, r in gi.iterrows()]
 
-    # Ranking
+    # Ranking por % batería desconectada
     ranking = []
     if col_conductor and col_metodo:
         total_c = df.groupby(col_conductor).size().reset_index(name="total")
         bat_c   = df[df["__metodo"] == "Batería Desconectada"].groupby(col_conductor).size().reset_index(name="bat_desc")
         rk = total_c.merge(bat_c, on=col_conductor, how="left").fillna(0)
         rk["pct_bat"] = (rk["bat_desc"] / rk["total"] * 100).round(1)
-        rk = rk.sort_values("pct_bat").head(20)
+        rk = rk.sort_values("pct_bat").head(50)
         ranking = [{"conductor": r[col_conductor], "pct_bat": float(r["pct_bat"])} for _, r in rk.iterrows()]
+
+    # Ranking por cantidad de baterías desconectadas (mayor a menor)
+    ranking_bat_desc = []
+    if col_conductor and col_metodo:
+        bat_rows = df[df["__metodo"] == "Batería Desconectada"]
+        if len(bat_rows) > 0:
+            rb = bat_rows.groupby(col_conductor).size().reset_index(name="bat_desc")
+            rb = rb.sort_values("bat_desc", ascending=False).head(50)
+            ranking_bat_desc = [{"conductor": r[col_conductor], "bat_desc": int(r["bat_desc"])} for _, r in rb.iterrows()]
 
     cond_disp = sorted(df[col_conductor].dropna().unique().tolist()) if col_conductor else []
 
@@ -487,6 +506,7 @@ def _procesar_bat(df: pd.DataFrame, fecha_desde=None, fecha_hasta=None,
         "por_hora": por_hora,
         "incidentes_20pct": incidentes_20,
         "ranking": ranking,
+        "ranking_bat_desc": ranking_bat_desc,
         "conductores": cond_disp,
     }
 

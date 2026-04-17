@@ -4,6 +4,7 @@
 let clienteActual = '';
 let moduloActual  = 'golpes';   // tab activo
 let charts = {};
+let lastData = { golpes: null, util: null, bat: null };  // cache para rankings
 const COLORS = ['#e8650a','#a0a0a0','#ff9a4d','#6b6b6b','#ffb87a','#4a4a4a','#ffd4a8','#888888'];
 
 Chart.defaults.color = '#888';
@@ -44,6 +45,7 @@ async function cargarListaClientes() {
 
 function cambiarCliente(id) {
   clienteActual = id;
+  lastData = { golpes: null, util: null, bat: null };
   window.history.pushState({}, '', `/dashboard/${id}`);
   limpiarFiltros(false);
   cargarModulo();
@@ -61,7 +63,9 @@ function limpiarFiltros(reload = true) {
 function aplicarFiltros() { cargarModulo(); }
 
 function _params(modulo) {
-  const p = new URLSearchParams({ modulo });
+  const p = new URLSearchParams();
+  // rankings necesita todos los módulos — no pasar parámetro modulo
+  if (modulo !== 'rankings') p.set('modulo', modulo);
   const v = (id) => document.getElementById(id).value;
   if (v('fDesde'))     p.set('desde',     v('fDesde'));
   if (v('fHasta'))     p.set('hasta',     v('fHasta'));
@@ -81,9 +85,14 @@ async function cargarModulo() {
     const data = await res.json();
     setLoading(false);
     document.title = `I_Site — ${data.cliente}`;
+    // Fusionar en lastData para que rankings tenga todos los módulos
+    if (data.golpes) lastData.golpes = data.golpes;
+    if (data.util)   lastData.util   = data.util;
+    if (data.bat)    lastData.bat    = data.bat;
     if (data.golpes) { renderGolpes(data.golpes); actualizarFiltros(data.golpes); }
     if (data.util)   { renderUtil(data.util);     actualizarFiltros(data.util);   }
     if (data.bat)    { renderBat(data.bat); }
+    if (moduloActual === 'rankings') renderRankings(lastData);
     if (!data.golpes && !data.util && !data.bat) {
       document.getElementById('noData').classList.remove('hidden');
     }
@@ -284,15 +293,52 @@ function ranking(id, cols, rows) {
   el.innerHTML = html;
 }
 
+// ── Rankings ──────────────────────────────────────────────────────────────────
+function renderRankings(d) {
+  const g = d.golpes || {};
+  const u = d.util   || {};
+  const b = d.bat    || {};
+
+  ranking('rnk-golpes',
+    [{ key: '#', label: '#' }, { key: 'conductor', label: 'Conductor' }, { key: 'golpes_altos', label: 'Golpes Altos' }],
+    (g.ranking || []).map((r, i) => ({ ...r, '#': i + 1 })));
+
+  ranking('rnk-bat-desc',
+    [{ key: '#', label: '#' }, { key: 'conductor', label: 'Conductor' }, { key: 'bat_desc', label: 'Bat. Desconectadas' }],
+    (b.ranking_bat_desc || []).map((r, i) => ({ ...r, '#': i + 1 })));
+
+  ranking('rnk-claves',
+    [{ key: '#', label: '#' }, { key: 'conductor', label: 'Conductor' }, { key: 'claves', label: 'Claves Compartidas' }],
+    (u.claves_conductor || []).map((r, i) => ({ ...r, '#': i + 1 })));
+
+  ranking('rnk-hrs',
+    [{ key: '#', label: '#' }, { key: 'conductor', label: 'Conductor' }, { key: 'hrs_func', label: 'Hrs Utilización' }],
+    (u.ranking_hrs || []).map((r, i) => ({ ...r, '#': i + 1 })));
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
   document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + name).classList.remove('hidden');
   btn.classList.add('active');
+
+  if (name === 'rankings') {
+    // Rankings necesita todos los módulos
+    const tieneAll = lastData.golpes && lastData.util;
+    if (moduloActual !== 'rankings') {
+      moduloActual = 'rankings';
+      if (tieneAll) {
+        renderRankings(lastData);
+      } else {
+        cargarModulo();
+      }
+    }
+    return;
+  }
+
   // Carga lazy: solo pide datos si cambió el módulo
-  const modMap = { golpes: 'golpes', util: 'util', bat: 'bat' };
-  const nuevoModulo = modMap[name] || name;
+  const nuevoModulo = name;
   if (nuevoModulo !== moduloActual) {
     moduloActual = nuevoModulo;
     cargarModulo();

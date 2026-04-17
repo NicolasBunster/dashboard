@@ -89,8 +89,6 @@ GOLPES_MAP = [
     (["hora", "fecha"],                           "hora_golpe"),
     (["descarga", "batería", "bateria"],          "descarga_bateria"),
     (["velocidad"],                               "velocidad"),
-    (["traccionando"],                            "traccionando"),
-    (["elevando"],                                "elevando"),
 ]
 
 UTIL_MAP = [
@@ -175,7 +173,7 @@ def _leer_archivos(carpeta: Path, tipo: str) -> pd.DataFrame | None:
 # ── Upload principal ──────────────────────────────────────────────────────────
 
 def subir_cliente(cliente: str, rutas: dict, engine, dry_run: bool = False):
-    print(f"\n── {cliente.upper()} ──")
+    print(f"\n--- {cliente.upper()} ---")
 
     for tipo, tabla, col_map in [
         ("golpes", "golpes",     GOLPES_MAP),
@@ -191,6 +189,28 @@ def subir_cliente(cliente: str, rutas: dict, engine, dry_run: bool = False):
         df = _mapear(df_raw, col_map)
         df["cliente"] = cliente
         df = df.dropna(how="all")
+
+        # Guardar fechas como string para compatibilidad con PostgreSQL
+        # y filtrar solo últimos 12 meses para no llenar el disco
+        for col_fecha in ["hora_golpe", "inicio"]:
+            if col_fecha in df.columns:
+                fechas = pd.to_datetime(df[col_fecha], dayfirst=True, errors="coerce")
+                corte  = pd.Timestamp.now() - pd.DateOffset(months=12)
+                df     = df[fechas.isna() | (fechas >= corte)]
+                df[col_fecha] = df[col_fecha].astype(str).replace({"NaT": None, "nan": None})
+                break  # solo aplicar al primer col_fecha encontrado
+
+        # Coercion de columnas numericas: filas con notas al pie (strings) -> NaN
+        FLOAT_COLS = ["descarga_bateria", "velocidad",
+                      "seg_llave", "seg_funcionam", "seg_traccion",
+                      "seg_elevacion", "ratio_func_llave"]
+        INT_COLS   = ["claves_compartidas"]
+        for col in FLOAT_COLS:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        for col in INT_COLS:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
 
         print(f"  {tipo}: {len(df):,} filas", end="")
 
