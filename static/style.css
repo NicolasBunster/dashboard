@@ -94,9 +94,11 @@ header {
   padding: 14px 20px; min-width: 150px; flex: 1;
 }
 .kpi-card.kpi-accent { border-color: var(--accent); }
+.kpi-card.kpi-warn   { border-color: var(--accent2); }
 .kpi-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .kpi-val { font-size: 28px; font-weight: 700; color: var(--text); }
 .kpi-accent .kpi-val { color: var(--accent); }
+.kpi-warn .kpi-val   { color: var(--accent2); }
 
 /* ── Section Title ── */
 .section-title {
@@ -120,14 +122,19 @@ canvas { max-height: 260px; }
 /* ── Ranking Table ── */
 .ranking-table { font-size: 12px; }
 .ranking-table .r-header {
-  display: grid; color: var(--text-dim); padding: 4px 0;
+  display: grid; color: var(--text-dim); padding: 4px 6px;
   border-bottom: 1px solid var(--border); margin-bottom: 4px;
-  font-size: 10px; text-transform: uppercase;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px;
 }
 .ranking-table .r-row {
-  display: grid; padding: 5px 0; border-bottom: 1px solid #1e1e1e;
+  display: grid; padding: 5px 6px; border-bottom: 1px solid #1e1e1e;
 }
 .ranking-table .r-row:hover { background: var(--bg3); }
+.ranking-table .r-top1 { background: rgba(232,101,10,.12); }
+.ranking-table .r-top2 { background: rgba(232,101,10,.07); }
+.ranking-table .r-top3 { background: rgba(232,101,10,.04); }
+.ranking-horiz { max-height: none; overflow: visible; }
+.ranking-horiz .r-header, .ranking-horiz .r-row { grid-auto-flow: column; }
 .ranking-total { color: var(--accent); font-weight: 700; padding-top: 6px; font-size: 11px; }
 
 /* ── Rankings Grid ── */

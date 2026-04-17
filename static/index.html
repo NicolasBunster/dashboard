@@ -55,36 +55,66 @@
 
   <!-- Loading -->
   <div id="loading" class="loading hidden">Cargando datos...</div>
-  <div id="noData" class="no-data hidden">Sin datos disponibles para este cliente.<br>Ejecuta el consolidado primero.</div>
+  <div id="noData" class="no-data hidden">Sin datos disponibles para este cliente.</div>
 
   <!-- ═══ GOLPES ═══ -->
   <section id="tab-golpes" class="tab-content">
     <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">Total Conductores</div><div class="kpi-val" id="g-conductores">—</div></div>
-      <div class="kpi-card kpi-accent"><div class="kpi-label">Total Golpes Altos</div><div class="kpi-val" id="g-altos">—</div></div>
-      <div class="kpi-card"><div class="kpi-label">Total Golpes Medios</div><div class="kpi-val" id="g-medios">—</div></div>
-      <div class="kpi-card"><div class="kpi-label">Total Máquinas</div><div class="kpi-val" id="g-maquinas">—</div></div>
-      <div class="kpi-card"><div class="kpi-label">Apagado Bat. Desconectada</div><div class="kpi-val" id="g-batdesc">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total Golpes</div><div class="kpi-val" id="g-total">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">Golpes Altos</div><div class="kpi-val" id="g-altos">—</div></div>
+      <div class="kpi-card kpi-warn"><div class="kpi-label">Golpes Medios</div><div class="kpi-val" id="g-medios">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Golpes Bajos</div><div class="kpi-val" id="g-bajos">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">% Golpes Altos</div><div class="kpi-val" id="g-pct-altos">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Conductores</div><div class="kpi-val" id="g-conductores">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Máquinas</div><div class="kpi-val" id="g-maquinas">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Velocidad Prom. (altos)</div><div class="kpi-val" id="g-vel">—</div></div>
     </div>
     <h2 class="section-title">GOLPES</h2>
+
     <div class="charts-row">
       <div class="chart-card chart-sm">
-        <h3>Total por Familia de Máquina</h3>
+        <h3>Distribución por Familia</h3>
         <canvas id="g-donut"></canvas>
       </div>
-      <div class="chart-card chart-md">
-        <h3>Golpes Altos por Mes</h3>
+      <div class="chart-card chart-lg">
+        <h3>Golpes por Mes (Altos + Medios)</h3>
         <canvas id="g-linea-mes"></canvas>
       </div>
-      <div class="chart-card chart-sm">
-        <h3>Ranking Conductores</h3>
-        <div id="g-ranking" class="ranking-table"></div>
-      </div>
     </div>
+
     <div class="charts-row">
       <div class="chart-card chart-full">
-        <h3>Golpes Altos — Últimos 30 Días</h3>
+        <h3>Golpes Últimos 30 Días (Altos + Medios)</h3>
         <canvas id="g-barras-30"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Golpes Altos por Hora del Día</h3>
+        <canvas id="g-hora"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Golpes Altos por Día de la Semana</h3>
+        <canvas id="g-diasemana"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Top Máquinas con más Golpes Altos</h3>
+        <canvas id="g-maquinas-chart"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Golpes Altos por Site</h3>
+        <canvas id="g-site"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-full">
+        <h3>Ranking Conductores — Golpes Altos</h3>
+        <div id="g-ranking" class="ranking-table ranking-scroll ranking-horiz"></div>
       </div>
     </div>
   </section>
@@ -92,71 +122,111 @@
   <!-- ═══ UTILIZACIÓN ═══ -->
   <section id="tab-util" class="tab-content hidden">
     <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">Horas Funcionamiento</div><div class="kpi-val" id="u-hrsfunc">—</div></div>
-      <div class="kpi-card"><div class="kpi-label">Horas Llave</div><div class="kpi-val" id="u-hrsllave">—</div></div>
-      <div class="kpi-card kpi-accent"><div class="kpi-label">% Eficiencia KPI</div><div class="kpi-val" id="u-eficiencia">—</div></div>
-      <div class="kpi-card"><div class="kpi-label">Apagado Bat. Desconectada</div><div class="kpi-val" id="u-batdesc">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">Hrs Funcionamiento</div><div class="kpi-val" id="u-hrsfunc">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Hrs Llave</div><div class="kpi-val" id="u-hrsllave">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Hrs Tracción</div><div class="kpi-val" id="u-hrstrac">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Hrs Elevación</div><div class="kpi-val" id="u-hrselev">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">% Eficiencia</div><div class="kpi-val" id="u-eficiencia">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total Sesiones</div><div class="kpi-val" id="u-sesiones">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Prom. Min/Sesión</div><div class="kpi-val" id="u-avgsesion">—</div></div>
+      <div class="kpi-card kpi-warn"><div class="kpi-label">Apagado Bat. Desc.</div><div class="kpi-val" id="u-batdesc">—</div></div>
+      <div class="kpi-card kpi-warn"><div class="kpi-label">% Apagado Bat. Desc.</div><div class="kpi-val" id="u-pctbat">—</div></div>
     </div>
     <h2 class="section-title">UTILIZACIÓN</h2>
+
     <div class="charts-row">
       <div class="chart-card chart-sm">
-        <h3>Horas Funcionamiento por Familia</h3>
+        <h3>Horas por Familia de Máquina</h3>
         <canvas id="u-donut"></canvas>
       </div>
-      <div class="chart-card chart-lg">
-        <h3>Claves Compartidas por Conductor</h3>
-        <canvas id="u-claves"></canvas>
+      <div class="chart-card chart-sm">
+        <h3>Distribución Método de Apagado</h3>
+        <canvas id="u-metodo"></canvas>
       </div>
-    </div>
-    <div class="charts-row">
       <div class="chart-card chart-md">
         <h3>Hrs Funcionamiento por Mes</h3>
         <canvas id="u-linea-mes"></canvas>
       </div>
+    </div>
+
+    <div class="charts-row">
       <div class="chart-card chart-md">
-        <h3>Hrs Funcionamiento por Día (últimos 30 días)</h3>
+        <h3>Hrs Func por Día (últimos 30 días)</h3>
         <canvas id="u-barras-dia"></canvas>
       </div>
+      <div class="chart-card chart-md">
+        <h3>Hrs Func por Día de la Semana</h3>
+        <canvas id="u-diasemana"></canvas>
+      </div>
     </div>
+
     <div class="charts-row">
-      <div class="chart-card chart-sm">
-        <h3>Ranking Conductores</h3>
-        <div id="u-ranking" class="ranking-table"></div>
+      <div class="chart-card chart-md">
+        <h3>Top Máquinas por Horas Funcionamiento</h3>
+        <canvas id="u-maquinas"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Claves Compartidas por Conductor</h3>
+        <canvas id="u-claves"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-full">
+        <h3>Ranking Conductores — Menor a Mayor Utilización</h3>
+        <div id="u-ranking" class="ranking-table ranking-scroll ranking-horiz"></div>
       </div>
     </div>
   </section>
 
   <!-- ═══ BATERÍAS ═══ -->
   <section id="tab-bat" class="tab-content hidden">
-    <h2 class="section-title">BATERÍAS</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total Sesiones</div><div class="kpi-val" id="b-total">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">Bat. Desconectadas</div><div class="kpi-val" id="b-batdesc">—</div></div>
+      <div class="kpi-card kpi-accent"><div class="kpi-label">% Bat. Desconectadas</div><div class="kpi-val" id="b-pctbat">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Apagado Normal</div><div class="kpi-val" id="b-normal">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Inactividad</div><div class="kpi-val" id="b-inactiv">—</div></div>
+    </div>
+    <h2 class="section-title">BATERÍAS DESCONECTADAS</h2>
+
     <div class="charts-row">
       <div class="chart-card chart-md">
-        <h3>Distribución Método Apagado por Máquina</h3>
+        <h3>Bat. Desconectadas por Mes</h3>
+        <canvas id="b-bat-mes"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Total Sesiones por Mes</h3>
+        <canvas id="b-mes"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Bat. Desconectadas por Hora del Día</h3>
+        <canvas id="b-hora"></canvas>
+      </div>
+      <div class="chart-card chart-md">
+        <h3>Bat. Desconectadas por Día de la Semana</h3>
+        <canvas id="b-diasemana"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-md">
+        <h3>Distribución Apagado por Máquina</h3>
         <canvas id="b-maquina"></canvas>
       </div>
       <div class="chart-card chart-md">
-        <h3>Distribución Método Apagado por Conductor</h3>
+        <h3>Distribución Apagado por Conductor</h3>
         <canvas id="b-conductor"></canvas>
       </div>
     </div>
+
     <div class="charts-row">
-      <div class="chart-card chart-md">
-        <h3>Recuento por Mes</h3>
-        <canvas id="b-mes"></canvas>
-      </div>
-      <div class="chart-card chart-md">
-        <h3>Incidentes por Hora (últimos 6 meses)</h3>
-        <canvas id="b-hora"></canvas>
-      </div>
-    </div>
-    <div class="charts-row">
-      <div class="chart-card chart-md">
-        <h3>Incidentes Batería &lt;20%</h3>
-        <canvas id="b-20pct"></canvas>
-      </div>
-      <div class="chart-card chart-sm">
-        <h3>Ranking Conductores</h3>
-        <div id="b-ranking" class="ranking-table"></div>
+      <div class="chart-card chart-full">
+        <h3>Ranking Conductores — Bat. Desconectadas</h3>
+        <div id="b-ranking" class="ranking-table ranking-scroll ranking-horiz"></div>
       </div>
     </div>
   </section>
@@ -165,27 +235,22 @@
   <section id="tab-rankings" class="tab-content hidden">
     <h2 class="section-title">RANKINGS</h2>
     <div class="rankings-grid">
-
       <div class="chart-card ranking-panel">
         <h3>Golpes Altos por Conductor <span class="rank-badge">Mayor → Menor</span></h3>
         <div id="rnk-golpes" class="ranking-table ranking-scroll"></div>
       </div>
-
       <div class="chart-card ranking-panel">
         <h3>Baterías Desconectadas por Conductor <span class="rank-badge">Mayor → Menor</span></h3>
         <div id="rnk-bat-desc" class="ranking-table ranking-scroll"></div>
       </div>
-
       <div class="chart-card ranking-panel">
         <h3>Claves Compartidas por Conductor <span class="rank-badge">Mayor → Menor</span></h3>
         <div id="rnk-claves" class="ranking-table ranking-scroll"></div>
       </div>
-
       <div class="chart-card ranking-panel">
         <h3>Horas de Utilización por Conductor <span class="rank-badge">Menor → Mayor</span></h3>
         <div id="rnk-hrs" class="ranking-table ranking-scroll"></div>
       </div>
-
     </div>
   </section>
 
