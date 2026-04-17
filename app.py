@@ -532,14 +532,36 @@ def health():
 @app.get("/api/clientes")
 def get_clientes():
     result = []
-    def _existe(carpeta, nombre_base):
+
+    # En modo DB: consultar qué clientes tienen filas en cada tabla
+    engine = _get_db()
+    db_golpes = set()
+    db_util   = set()
+    if engine is not None:
+        try:
+            from sqlalchemy import text as _text
+            with engine.connect() as conn:
+                for row in conn.execute(_text("SELECT DISTINCT cliente FROM golpes")):
+                    db_golpes.add(row[0])
+                for row in conn.execute(_text("SELECT DISTINCT cliente FROM utilizacion")):
+                    db_util.add(row[0])
+        except Exception as e:
+            print(f"  [DB] get_clientes error: {e}")
+
+    def _existe_excel(carpeta, nombre_base):
         if not carpeta:
             return False
         return (carpeta / f"{nombre_base}.xlsx").exists() or bool(list(carpeta.glob(f"{nombre_base}_parte*.xlsx")))
+
     for key, meta in CLIENTES.items():
-        tiene_g = _existe(meta["golpes"], "_CONSOLIDADO_GOLPES")
-        tiene_u = _existe(meta["util"],   "_CONSOLIDADO_UTILIZACION")
-        tiene_b = _existe(meta["bat"],    "_CONSOLIDADO_BATERIAS")
+        if engine is not None:
+            tiene_g = key in db_golpes
+            tiene_u = key in db_util
+            tiene_b = key in db_util  # bat usa la misma tabla utilizacion
+        else:
+            tiene_g = _existe_excel(meta["golpes"], "_CONSOLIDADO_GOLPES")
+            tiene_u = _existe_excel(meta["util"],   "_CONSOLIDADO_UTILIZACION")
+            tiene_b = _existe_excel(meta["bat"],    "_CONSOLIDADO_BATERIAS")
         result.append({"id": key, "label": meta["label"], "golpes": tiene_g, "util": tiene_u, "bat": tiene_b})
     return result
 
